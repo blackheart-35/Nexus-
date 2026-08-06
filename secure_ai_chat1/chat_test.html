@@ -202,6 +202,9 @@
     <!-- 4. APPLICATION LOGIC (JavaScript)          -->
     <!-- ========================================== -->
     <script>
+        const API_BASE = "https://nexus-9q5s.onrender.com";
+        const WS_BASE = "wss://nexus-9q5s.onrender.com";
+
         let ws;
         let currentUsername = localStorage.getItem("chat_username") || "";
         let currentToken = localStorage.getItem("chat_token") || "";
@@ -240,7 +243,7 @@
             let password = document.getElementById("regPassword").value;
 
             try {
-                let response = await fetch("http://127.0.0.1:8000/users/", {
+                let response = await fetch(`${API_BASE}/users/`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username, email, password })
                 });
@@ -253,11 +256,10 @@
                     document.getElementById("loginPassword").value = password;
                     switchTab('login');
                 } else {
-                    // Show exact unique constraint error from backend (e.g. Username already taken)
                     showError(data.detail || "Registration failed.");
                 }
             } catch (err) {
-                showError("Server connection error. Make sure FastAPI is running.");
+                showError("Server connection error.");
             }
         }
 
@@ -269,7 +271,7 @@
             formData.append("username", username); formData.append("password", password);
 
             try {
-                let response = await fetch("http://127.0.0.1:8000/login", {
+                let response = await fetch(`${API_BASE}/login`, {
                     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: formData
                 });
 
@@ -295,7 +297,7 @@
             await loadMyProfile();
             await loadChatHistory();
 
-            ws = new WebSocket(`ws://127.0.0.1:8000/ws/${username}?token=${token}`);
+            ws = new WebSocket(`${WS_BASE}/ws/${username}?token=${token}`);
             ws.onmessage = function(event) {
                 let data = JSON.parse(event.data);
                 if (data.type === "users_list") {
@@ -308,7 +310,7 @@
 
         async function loadMyProfile() {
             try {
-                let res = await fetch(`http://127.0.0.1:8000/profile/${currentUsername}`);
+                let res = await fetch(`${API_BASE}/profile/${currentUsername}`);
                 if (res.ok) {
                     let data = await res.json();
                     document.getElementById("nav-user-avatar").src = data.profile_pic;
@@ -329,7 +331,7 @@
             if(fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
 
             try {
-                let response = await fetch("http://127.0.0.1:8000/profile/", { method: "POST", body: formData });
+                let response = await fetch(`${API_BASE}/profile/`, { method: "POST", body: formData });
                 if(response.ok) {
                     alert("Profile updated successfully!");
                     closeProfileModal();
@@ -356,7 +358,7 @@
 
         async function loadChatHistory() {
             try {
-                let res = await fetch("http://127.0.0.1:8000/messages/");
+                let res = await fetch(`${API_BASE}/messages/`);
                 if (res.ok) {
                     let messages = await res.json();
                     let chatBox = document.getElementById("chat-box");
