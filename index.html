@@ -102,7 +102,7 @@
                 <button class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></button>
             </div>
             <div class="relative group cursor-pointer" onclick="openProfileModal()">
-                <img id="nav-user-avatar" src="" class="w-10 h-10 rounded-2xl object-cover ring-2 ring-indigo-500/20 group-hover:ring-indigo-500 transition-all">
+                <img id="nav-user-avatar" src="https://api.dicebear.com/7.x/identicon/svg?seed=Nexus" class="w-10 h-10 rounded-2xl object-cover ring-2 ring-indigo-500/20 group-hover:ring-indigo-500 transition-all">
                 <div class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
             </div>
         </nav>
@@ -202,13 +202,16 @@
     <!-- 4. APPLICATION LOGIC (JavaScript)          -->
     <!-- ========================================== -->
     <script>
+        // API URLs updated to match your live backend perfectly
+        const API_BASE = "https://nexus-9q5s.onrender.com";
+        const WS_BASE = "wss://nexus-9q5s.onrender.com/ws";
+
         let ws;
         let currentUsername = localStorage.getItem("chat_username") || "";
-        let currentToken = localStorage.getItem("chat_token") || "";
 
         window.onload = function() {
-            if (currentUsername && currentToken) {
-                initWorkspace(currentUsername, currentToken);
+            if (currentUsername) {
+                initWorkspace(currentUsername);
             }
         };
 
@@ -240,7 +243,8 @@
             let password = document.getElementById("regPassword").value;
 
             try {
-                let response = await fetch("http://127.0.0.1:8000/users/", {
+                // Pointing to /register and sending proper JSON
+                let response = await fetch(`${API_BASE}/register`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username, email, password })
                 });
@@ -253,11 +257,10 @@
                     document.getElementById("loginPassword").value = password;
                     switchTab('login');
                 } else {
-                    // Show exact unique constraint error from backend (e.g. Username already taken)
                     showError(data.detail || "Registration failed.");
                 }
             } catch (err) {
-                showError("Server connection error. Make sure FastAPI is running.");
+                showError("Server connection error.");
             }
         }
 
@@ -265,56 +268,53 @@
             event.preventDefault();
             let username = document.getElementById("loginUsername").value.trim();
             let password = document.getElementById("loginPassword").value;
-            let formData = new URLSearchParams();
-            formData.append("username", username); formData.append("password", password);
 
             try {
-                let response = await fetch("http://127.0.0.1:8000/login", {
-                    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: formData
+                // Pointing to /login and sending proper JSON
+                let response = await fetch(`${API_BASE}/login`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
                 });
 
+                let data = await response.json();
+
                 if (!response.ok) {
-                    showError("Invalid username or password.");
+                    showError(data.detail || "Invalid username or password.");
                     return;
                 }
 
-                let data = await response.json();
-                localStorage.setItem("chat_token", data.access_token);
                 localStorage.setItem("chat_username", data.username);
-                initWorkspace(data.username, data.access_token);
+                initWorkspace(data.username);
             } catch (err) {
                 showError("Server connection error.");
             }
         }
 
-        async function initWorkspace(username, token) {
-            currentUsername = username; currentToken = token;
+        async function initWorkspace(username) {
+            currentUsername = username;
             document.getElementById("auth-screen").classList.add("hidden");
             document.getElementById("chat-screen").classList.remove("hidden");
+            document.getElementById("nav-user-avatar").src = `https://api.dicebear.com/7.x/identicon/svg?seed=${username}`;
 
-            await loadMyProfile();
-            await loadChatHistory();
+            // Clean WebSocket Connection
+            ws = new WebSocket(WS_BASE);
 
-            ws = new WebSocket(`ws://127.0.0.1:8000/ws/${username}?token=${token}`);
+            ws.onopen = function() {
+                appendMessageToUI({ type: "system", content: "Secure connection established with Nexus Relay." });
+            };
+
             ws.onmessage = function(event) {
-                let data = JSON.parse(event.data);
-                if (data.type === "users_list") {
-                    updateOnlineUsers(data.users);
-                } else {
-                    appendMessageToUI(data);
+                try {
+                    let data = JSON.parse(event.data);
+                    if (data.type === "users_list") {
+                        updateOnlineUsers(data.users);
+                    } else {
+                        appendMessageToUI(data);
+                    }
+                } catch(e) {
+                    console.error("Received non-JSON data", event.data);
                 }
             };
-        }
-
-        async function loadMyProfile() {
-            try {
-                let res = await fetch(`http://127.0.0.1:8000/profile/${currentUsername}`);
-                if (res.ok) {
-                    let data = await res.json();
-                    document.getElementById("nav-user-avatar").src = data.profile_pic;
-                    document.getElementById("profileBio").value = data.bio;
-                }
-            } catch(e) {}
         }
 
         function openProfileModal() { document.getElementById("profile-modal").classList.remove("hidden"); }
@@ -322,20 +322,8 @@
 
         async function submitProfile(event) {
             event.preventDefault();
-            let formData = new FormData();
-            formData.append("token", currentToken);
-            formData.append("bio", document.getElementById("profileBio").value);
-            let fileInput = document.getElementById("profilePic");
-            if(fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
-
-            try {
-                let response = await fetch("http://127.0.0.1:8000/profile/", { method: "POST", body: formData });
-                if(response.ok) {
-                    alert("Profile updated successfully!");
-                    closeProfileModal();
-                    await loadMyProfile();
-                } else { alert("Failed to update profile."); }
-            } catch(e) { alert("Server upload error."); }
+            alert("Profile feature will be available in the next Nexus update!");
+            closeProfileModal();
         }
 
         function updateOnlineUsers(users) {
@@ -352,23 +340,6 @@
                     <span class="text-xs font-medium text-slate-600 group-hover:text-slate-900 transition-colors">@${label}</span>
                 </div>`;
             }).join('');
-        }
-
-        async function loadChatHistory() {
-            try {
-                let res = await fetch("http://127.0.0.1:8000/messages/");
-                if (res.ok) {
-                    let messages = await res.json();
-                    let chatBox = document.getElementById("chat-box");
-                    chatBox.innerHTML = "";
-                    messages.forEach(msg => {
-                        appendMessageToUI({
-                            type: "chat", sender: "User " + msg.owner_id, content: msg.content,
-                            time: "History", pfp: "https://api.dicebear.com/7.x/identicon/svg?seed=History"
-                        });
-                    });
-                }
-            } catch(e) {}
         }
 
         function appendMessageToUI(data) {
@@ -420,7 +391,15 @@
             event.preventDefault();
             let input = document.getElementById("messageText");
             if (ws && ws.readyState === WebSocket.OPEN && input.value.trim() !== "") {
-                ws.send(input.value);
+                // Send JSON directly to the backend
+                let msgData = {
+                    type: "chat",
+                    sender: currentUsername,
+                    content: input.value,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                };
+                ws.send(JSON.stringify(msgData));
+
                 input.value = "";
                 input.style.height = 'auto';
             }
