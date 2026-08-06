@@ -1,0 +1,22 @@
+# Python Virtual Environment
+venv/
+env/
+ENV/
+
+# Database files
+sql_app.db
+*.db
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Uploaded static files (Agar aap chahte hain ki dosto ki upload ki gayi DPs server par hi rahein, local repo me commit na ho)
+static/*
+!static/.gitkeep
+
+# Environment variables & OS files
+.env
+.DS_Store
+Thumbs.db
