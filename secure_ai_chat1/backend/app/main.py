@@ -21,7 +21,7 @@ app = FastAPI(title="Nexus Workspace API", version="2.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://nexus-vruq.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
