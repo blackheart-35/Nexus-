@@ -7,25 +7,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 import json
-import smtplib
 import random
-from email.message import EmailMessage
-from email_validator import validate_email, EmailNotValidError
 
-# --- 1. Email Server Configuration ---
-SENDER_EMAIL = "nexususeradmin34@gmail.com"
-APP_PASSWORD = "wtubjqsaglqbpgvg" # Spaces removed for proper authentication
-
-# Temporary memory for OTPs (Email -> OTP)
-pending_otps = {}
-
-# --- 2. Database Setup ---
+# --- 1. Database Setup ---
 DATABASE_URL = "sqlite:///./nexus.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- 3. Database Models ---
+# Temporary memory for OTPs (Email -> OTP)
+pending_otps = {}
+
+# --- 2. Database Models ---
 class DBUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -51,8 +44,8 @@ class DBPrivateMessage(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# --- 4. FastAPI App Setup ---
-app = FastAPI(title="Nexus Workspace - Secure OTP")
+# --- 3. FastAPI App Setup ---
+app = FastAPI(title="Nexus Workspace - Dev Mode")
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,7 +62,7 @@ def get_db():
     finally:
         db.close()
 
-# --- 5. Schemas ---
+# --- 4. Schemas ---
 class UserRegister(BaseModel):
     username: str
     email: str
@@ -93,44 +86,54 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 6. Email OTP Logic (Dev Mode for Render Free Tier) ---
-def send_otp_email(receiver_email: str, otp_code: str):
-    # Render blocks SMTP, so we print the OTP in server logs for testing
-    print("\n" + "="*50)
-    print(f"🚨 URGENT: NEW OTP REQUEST 🚨")
-    print(f"📧 Sending to  : {receiver_email}")
-    print(f"🔑 YOUR OTP IS : {otp_code}")
-    print("="*50 + "\n")
-
-    # Hum system ko bolenge ki email successfully chala gaya
-    return True, "Success"
-
-# --- 7. Auth Routes ---
+# --- 5. Auth Routes (DEV MODE - OTP IN LOGS) ---
 @app.post("/register/send-otp")
 def register_send_otp(user: UserRegister, db: Session = Depends(get_db)):
+    clean_email = user.email.strip().lower() # Fixed Email case sensitivity
+
     if db.query(DBUser).filter(DBUser.username == user.username).first():
-        raise HTTPException(status_code=400, detail="Username already taken. Please try another one!")
-    if db.query(DBUser).filter(DBUser.email == user.email).first():
+        raise HTTPException(status_code=400, detail="Username already taken.")
+    if db.query(DBUser).filter(DBUser.email == clean_email).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
-    try:
-        # FIX: check_deliverability=False kar diya taaki server hang na ho
-        valid = validate_email(user.email, check_deliverability=False)
-        clean_email = valid.normalized
-    except EmailNotValidError:
-        raise HTTPException(status_code=400, detail="Invalid email format.")
-
+    # Generate OTP
     otp = str(random.randint(100000, 999999))
-    email_sent, error_msg = send_otp_email(clean_email, otp)
 
-    if not email_sent:
-        # Ab screen par exact error dikhega ki Google ne block kiya ya Render ne
-        raise HTTPException(status_code=500, detail=f"Failed: {error_msg}")
+    # 🚨 DEV MODE: Print OTP in Render Logs 🚨
+    print("\n" + "="*50)
+    print(f"🚨 URGENT: NEW OTP REQUEST 🚨")
+    print(f"📧 Sending to  : {clean_email}")
+    print(f"🔑 YOUR OTP IS : {otp}")
+    print("="*50 + "\n")
 
     pending_otps[clean_email] = otp
-    return {"message": "OTP sent! Check your inbox."}
+    return {"message": "OTP sent! Check Server Logs."}
 
-# --- 8. Friend System Routes ---
+@app.post("/register/verify")
+def verify_and_register(data: VerifyOTP, db: Session = Depends(get_db)):
+    clean_email = data.email.strip().lower()
+
+    if clean_email not in pending_otps or pending_otps[clean_email] != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+
+    if db.query(DBUser).filter(DBUser.username == data.username).first():
+        raise HTTPException(status_code=400, detail="Username taken during verification.")
+
+    new_user = DBUser(username=data.username, email=clean_email, password=data.password)
+    db.add(new_user)
+    db.commit()
+
+    del pending_otps[clean_email]
+    return {"message": "Account created successfully!"}
+
+@app.post("/login")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
+    if not db_user or db_user.password != user.password:
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    return {"message": "Login successful", "username": db_user.username}
+
+# --- 6. Friend System Routes ---
 @app.post("/friends/request/send")
 def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
     sender = db.query(DBUser).filter(DBUser.username == req.sender_username).first()
@@ -191,7 +194,7 @@ def get_private_history(user1: str, user2: str, db: Session = Depends(get_db)):
     ).order_by(DBPrivateMessage.timestamp.asc()).all()
     return [{"sender": m.sender_username, "receiver": m.receiver_username, "content": m.content} for m in messages]
 
-# --- 9. WebSocket Manager ---
+# --- 7. WebSocket Manager ---
 class ConnectionManager:
     def __init__(self):
         self.active_global: List[WebSocket] = []
