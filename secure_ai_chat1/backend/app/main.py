@@ -1,19 +1,19 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
+from typing import List, Dict
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 
-# --- 1. Database Setup (SQLite) ---
+# --- 1. Database Setup ---
 DATABASE_URL = "sqlite:///./nexus.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- 2. Database Models (Tables) ---
+# --- 2. Database Models ---
 class DBUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -21,28 +21,26 @@ class DBUser(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     bio = Column(Text, default="Hey! I am using Nexus.")
-    profile_pic = Column(String, default="")
 
 class DBFriendRequest(Base):
     __tablename__ = "friend_requests"
     id = Column(Integer, primary_key=True, index=True)
     sender_id = Column(Integer, ForeignKey("users.id"))
     receiver_id = Column(Integer, ForeignKey("users.id"))
-    status = Column(String, default="pending") # 'pending', 'accepted', 'rejected'
+    status = Column(String, default="pending")  # 'pending', 'accepted', 'rejected'
 
 class DBPrivateMessage(Base):
     __tablename__ = "private_messages"
     id = Column(Integer, primary_key=True, index=True)
-    sender_id = Column(Integer, ForeignKey("users.id"))
-    receiver_id = Column(Integer, ForeignKey("users.id"))
+    sender_username = Column(String)
+    receiver_username = Column(String)
     content = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-# Create tables in the database
 Base.metadata.create_all(bind=engine)
 
-# --- 3. FastAPI App Initialization ---
-app = FastAPI(title="Nexus Workspace - Phase 2")
+# --- 3. FastAPI App Setup ---
+app = FastAPI(title="Nexus Workspace - Friend System")
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,7 +50,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:
@@ -60,7 +57,7 @@ def get_db():
     finally:
         db.close()
 
-# --- 4. API Schemas ---
+# --- 4. Schemas ---
 class UserRegister(BaseModel):
     username: str
     email: str
@@ -70,59 +67,181 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-# --- 5. Core Routes ---
+class FriendReqAction(BaseModel):
+    request_id: int
+    action: str  # 'accepted' or 'rejected'
+
+class SendFriendReq(BaseModel):
+    sender_username: str
+    receiver_username: str
+
+# --- 5. Auth Routes ---
 @app.get("/")
 def read_root():
-    return {"status": "Nexus DB Server is Active!", "phase": 2}
+    return {"status": "Nexus Server Live with Friend System"}
 
 @app.post("/register")
 def register(user: UserRegister, db: Session = Depends(get_db)):
-    # Check if user exists
-    existing_user = db.query(DBUser).filter(DBUser.username == user.username).first()
-    if existing_user:
+    if db.query(DBUser).filter(DBUser.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
-
-    # Save new user to database
     new_user = DBUser(username=user.username, email=user.email, password=user.password)
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)
-    return {"message": "User registered successfully in Database"}
+    return {"message": "User registered successfully"}
 
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Verify from database
     db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
     if not db_user or db_user.password != user.password:
         raise HTTPException(status_code=400, detail="Invalid credentials")
-
     return {"message": "Login successful", "username": db_user.username}
 
-# --- 6. Global Relay (WebSockets) ---
+# --- 6. Friend System Routes ---
+@app.get("/users/search/{query}")
+def search_users(query: str, db: Session = Depends(get_db)):
+    users = db.query(DBUser).filter(DBUser.username.contains(query)).limit(10).all()
+    return [{"id": u.id, "username": u.username, "bio": u.bio} for u in users]
+
+@app.post("/friends/request/send")
+def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
+    sender = db.query(DBUser).filter(DBUser.username == req.sender_username).first()
+    receiver = db.query(DBUser).filter(DBUser.username == req.receiver_username).first()
+
+    if not receiver or sender.id == receiver.id:
+        raise HTTPException(status_code=400, detail="Invalid user request")
+
+    existing = db.query(DBFriendRequest).filter(
+        or_(
+            and_(DBFriendRequest.sender_id == sender.id, DBFriendRequest.receiver_id == receiver.id),
+            and_(DBFriendRequest.sender_id == receiver.id, DBFriendRequest.receiver_id == sender.id)
+        )
+    ).first()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Request already exists or already friends")
+
+    new_req = DBFriendRequest(sender_id=sender.id, receiver_id=receiver.id, status="pending")
+    db.add(new_req)
+    db.commit()
+    return {"message": "Friend request sent!"}
+
+@app.get("/friends/requests/pending/{username}")
+def get_pending_requests(username: str, db: Session = Depends(get_db)):
+    user = db.query(DBUser).filter(DBUser.username == username).first()
+    if not user:
+        return []
+    requests = db.query(DBFriendRequest).filter(
+        DBFriendRequest.receiver_id == user.id,
+        DBFriendRequest.status == "pending"
+    ).all()
+
+    res = []
+    for r in requests:
+        s = db.query(DBUser).filter(DBUser.id == r.sender_id).first()
+        res.append({"request_id": r.id, "sender_username": s.username})
+    return res
+
+@app.post("/friends/request/respond")
+def respond_friend_request(action: FriendReqAction, db: Session = Depends(get_db)):
+    req = db.query(DBFriendRequest).filter(DBFriendRequest.id == action.request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    req.status = action.action
+    db.commit()
+    return {"message": f"Request {action.action}"}
+
+@app.get("/friends/list/{username}")
+def get_friends_list(username: str, db: Session = Depends(get_db)):
+    user = db.query(DBUser).filter(DBUser.username == username).first()
+    if not user:
+        return []
+
+    accepted = db.query(DBFriendRequest).filter(
+        or_(DBFriendRequest.sender_id == user.id, DBFriendRequest.receiver_id == user.id),
+        DBFriendRequest.status == "accepted"
+    ).all()
+
+    friends = []
+    for a in accepted:
+        friend_id = a.receiver_id if a.sender_id == user.id else a.sender_id
+        f_user = db.query(DBUser).filter(DBUser.id == friend_id).first()
+        if f_user:
+            friends.append({"id": f_user.id, "username": f_user.username, "bio": f_user.bio})
+    return friends
+
+@app.get("/messages/private/{user1}/{user2}")
+def get_private_history(user1: str, user2: str, db: Session = Depends(get_db)):
+    messages = db.query(DBPrivateMessage).filter(
+        or_(
+            and_(DBPrivateMessage.sender_username == user1, DBPrivateMessage.receiver_username == user2),
+            and_(DBPrivateMessage.sender_username == user2, DBPrivateMessage.receiver_username == user1)
+        )
+    ).order_by(DBPrivateMessage.timestamp.asc()).all()
+    return [{"sender": m.sender_username, "receiver": m.receiver_username, "content": m.content} for m in messages]
+
+# --- 7. WebSocket Manager (Global + Private DMs) ---
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_global: List[WebSocket] = []
+        self.private_connections: Dict[str, WebSocket] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect_global(self, websocket: WebSocket):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.active_global.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+    def disconnect_global(self, websocket: WebSocket):
+        if websocket in self.active_global:
+            self.active_global.remove(websocket)
 
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
+    async def broadcast_global(self, message: str):
+        for connection in self.active_global:
             await connection.send_text(message)
+
+    async def connect_private(self, username: str, websocket: WebSocket):
+        await websocket.accept()
+        self.private_connections[username] = websocket
+
+    def disconnect_private(self, username: str):
+        if username in self.private_connections:
+            del self.private_connections[username]
+
+    async def send_private(self, sender: str, receiver: str, message_data: str, db: Session):
+        # Save to DB
+        msg = DBPrivateMessage(sender_username=sender, receiver_username=receiver, content=message_data)
+        db.add(msg)
+        db.commit()
+
+        # Send live if online
+        if receiver in self.private_connections:
+            await self.private_connections[receiver].send_text(message_data)
+        if sender in self.private_connections:
+            await self.private_connections[sender].send_text(message_data)
 
 manager = ConnectionManager()
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+async def global_websocket(websocket: WebSocket):
+    await manager.connect_global(websocket)
     try:
         while True:
             data = await websocket.receive_text()
-            await manager.broadcast(data)
+            await manager.broadcast_global(data)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect_global(websocket)
+
+@app.websocket("/ws/private/{username}")
+async def private_websocket(websocket: WebSocket, username: str):
+    await manager.connect_private(username, websocket)
+    db = SessionLocal()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            receiver = data.get("receiver")
+            content = data.get("content")
+            if receiver and content:
+                await manager.send_private(username, receiver, content, db)
+    except WebSocketDisconnect:
+        manager.disconnect_private(username)
+    finally:
+        db.close()
