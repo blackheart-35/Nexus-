@@ -26,23 +26,35 @@
                 <div class="w-12 h-12 mx-auto bg-blue-600 rounded-xl flex items-center justify-center mb-4"><span class="text-2xl text-white">🌍</span></div>
                 <h1 class="text-2xl font-bold">Nexus Workspace</h1>
             </div>
+
             <p id="auth-status" class="text-center text-sm font-semibold mb-4 text-red-500"></p>
-            <div class="flex gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl mb-6">
+
+            <div id="tab-buttons" class="flex gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl mb-6">
                 <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600">Login</button>
                 <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400">Register</button>
             </div>
-            <!-- Login Form (No Reload Check Added) -->
+
+            <!-- Login Form -->
             <form id="login-form" class="space-y-4">
                 <input type="text" id="loginUsername" placeholder="Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="password" id="loginPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Enter</button>
             </form>
-            <!-- Register Form -->
+
+            <!-- Register Form (Step 1: Get Details) -->
             <form id="register-form" class="space-y-4 hidden">
                 <input type="text" id="regUsername" placeholder="Choose Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                <input type="email" id="regEmail" placeholder="Email" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="email" id="regEmail" placeholder="Real Email Address" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="password" id="regPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all">Create Account</button>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all">Send OTP</button>
+            </form>
+
+            <!-- OTP Form (Step 2: Verify) -->
+            <form id="otp-form" class="space-y-4 hidden">
+                <p class="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">We've sent a 6-digit code to your email.</p>
+                <input type="text" id="regOtp" placeholder="Enter 6-Digit OTP" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest text-lg font-bold">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Verify & Create Account</button>
+                <button type="button" onclick="cancelOTP()" class="w-full text-gray-500 text-sm mt-2 hover:underline">Cancel</button>
             </form>
         </div>
     </div>
@@ -103,7 +115,6 @@
             <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <!-- Chat Form with ID to prevent default reload -->
                 <form id="chat-form" class="max-w-4xl mx-auto flex items-end gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-700">
                     <input type="text" id="messageText" placeholder="Write a message..." autocomplete="off" class="flex-1 bg-transparent border-0 focus:ring-0 text-sm py-2.5 px-4 outline-none">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl transition-colors shrink-0">
@@ -160,8 +171,9 @@
         let wsGlobal;
         let wsPrivate;
         let currentUser = localStorage.getItem("nexus_user");
+        let tempRegData = {}; // Stores details until OTP is verified
 
-        // Sticky Chat Memory: Pehle wali state yaad rakhega
+        // Sticky Chat Memory
         let currentChatType = localStorage.getItem("last_chat_type") || 'global';
         let currentChatTarget = localStorage.getItem("last_chat_target") || null;
 
@@ -174,9 +186,75 @@
             document.getElementById("auth-status").innerText = "";
             document.getElementById("login-form").classList.toggle("hidden", tab !== 'login');
             document.getElementById("register-form").classList.toggle("hidden", tab !== 'register');
+            document.getElementById("otp-form").classList.add("hidden");
+            document.getElementById("tab-buttons").classList.remove("hidden");
+
+            document.getElementById("tab-login").className = tab === 'login' ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600" : "flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400 bg-transparent";
+            document.getElementById("tab-register").className = tab === 'register' ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600" : "flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400 bg-transparent";
         }
 
-        // Secure Form Submit for Auth (Prevents Reload)
+        function cancelOTP() {
+            tempRegData = {};
+            switchTab('register');
+        }
+
+        // --- NEW OTP REGISTRATION SYSTEM ---
+        document.getElementById("register-form").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const username = document.getElementById("regUsername").value.trim();
+            const email = document.getElementById("regEmail").value.trim();
+            const password = document.getElementById("regPassword").value;
+
+            const status = document.getElementById("auth-status");
+            status.style.color = "gray";
+            status.innerText = "Checking email and sending OTP... Please wait.";
+
+            try {
+                const res = await fetch(`${API_BASE}/register/send-otp`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    tempRegData = { username, email, password };
+                    status.style.color = "green";
+                    status.innerText = "OTP Sent!";
+                    document.getElementById("register-form").classList.add("hidden");
+                    document.getElementById("tab-buttons").classList.add("hidden");
+                    document.getElementById("otp-form").classList.remove("hidden");
+                } else {
+                    status.style.color = "red";
+                    status.innerText = data.detail;
+                }
+            } catch (err) { status.innerText = "Error connecting to server."; }
+        });
+
+        document.getElementById("otp-form").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const otp = document.getElementById("regOtp").value.trim();
+            const status = document.getElementById("auth-status");
+            status.style.color = "gray";
+            status.innerText = "Verifying OTP...";
+
+            try {
+                const res = await fetch(`${API_BASE}/register/verify`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: tempRegData.email, otp: otp, username: tempRegData.username, password: tempRegData.password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    status.style.color = "green";
+                    status.innerText = "Account verified and created successfully! Please login.";
+                    document.getElementById("regOtp").value = "";
+                    switchTab('login');
+                } else {
+                    status.style.color = "red";
+                    status.innerText = data.detail;
+                }
+            } catch (err) { status.innerText = "Error verifying OTP."; }
+        });
+
+        // --- LOGIN SYSTEM ---
         document.getElementById("login-form").addEventListener("submit", async function(e) {
             e.preventDefault();
             const username = document.getElementById("loginUsername").value.trim();
@@ -185,19 +263,6 @@
                 const res = await fetch(`${API_BASE}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem("nexus_user", username); startWorkspace(username); }
-                else { document.getElementById("auth-status").style.color = "red"; document.getElementById("auth-status").innerText = data.detail; }
-            } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
-        });
-
-        document.getElementById("register-form").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const username = document.getElementById("regUsername").value.trim();
-            const email = document.getElementById("regEmail").value.trim();
-            const password = document.getElementById("regPassword").value;
-            try {
-                const res = await fetch(`${API_BASE}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
-                const data = await res.json();
-                if (res.ok) { document.getElementById("auth-status").style.color = "green"; document.getElementById("auth-status").innerText = "Success! Please login."; switchTab('login'); }
                 else { document.getElementById("auth-status").style.color = "red"; document.getElementById("auth-status").innerText = data.detail; }
             } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
         });
@@ -215,7 +280,6 @@
             connectGlobalWS();
             connectPrivateWS();
 
-            // Open exactly the chat you were in last time
             if (currentChatType === 'private' && currentChatTarget) {
                 selectChat('private', currentChatTarget);
             } else {
@@ -223,30 +287,25 @@
             }
         }
 
-        // WebSockets with Auto-Reconnect Logic
+        // WebSockets with Auto-Reconnect
         function connectGlobalWS() {
             wsGlobal = new WebSocket(WS_GLOBAL);
             wsGlobal.onmessage = (event) => {
                 if (currentChatType === 'global') renderMessage(JSON.parse(event.data));
             };
-            wsGlobal.onclose = () => { setTimeout(connectGlobalWS, 3000); }; // Auto-Reconnect
+            wsGlobal.onclose = () => { setTimeout(connectGlobalWS, 3000); };
         }
 
         function connectPrivateWS() {
             wsPrivate = new WebSocket(`${WS_PRIVATE}/${currentUser}`);
             wsPrivate.onmessage = (event) => {
                 let msg = JSON.parse(event.data);
-
-                // Ensures message only shows in the exact active window
-                const isRelevant =
-                    (msg.sender === currentChatTarget && msg.receiver === currentUser) ||
-                    (msg.sender === currentUser && msg.receiver === currentChatTarget);
-
+                const isRelevant = (msg.sender === currentChatTarget && msg.receiver === currentUser) || (msg.sender === currentUser && msg.receiver === currentChatTarget);
                 if (currentChatType === 'private' && isRelevant) {
                     renderMessage(msg);
                 }
             };
-            wsPrivate.onclose = () => { setTimeout(connectPrivateWS, 3000); }; // Auto-Reconnect
+            wsPrivate.onclose = () => { setTimeout(connectPrivateWS, 3000); };
         }
 
         function openProfileModal() { document.getElementById("profile-modal").classList.remove("hidden"); }
@@ -335,14 +394,12 @@
             currentChatType = type;
             currentChatTarget = target;
 
-            // Save state in LocalStorage to prevent reset on refresh
             localStorage.setItem("last_chat_type", type);
             if (target) localStorage.setItem("last_chat_target", target);
 
             const chatBox = document.getElementById("chat-box");
             chatBox.innerHTML = "";
 
-            // Re-render friends list to highlight the active chat
             loadFriendsAndRequests();
 
             if(type === 'global') {
@@ -385,9 +442,8 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // Bulletproof Chat Form Submission
         document.getElementById("chat-form").addEventListener("submit", function(e) {
-            e.preventDefault(); // Prevents page reload 100%
+            e.preventDefault();
             const input = document.getElementById("messageText");
             const content = input.value.trim();
             if (content === "") return;
