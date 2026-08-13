@@ -31,12 +31,14 @@
                 <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600">Login</button>
                 <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400">Register</button>
             </div>
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+            <!-- Login Form (No Reload Check Added) -->
+            <form id="login-form" class="space-y-4">
                 <input type="text" id="loginUsername" placeholder="Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="password" id="loginPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Enter</button>
             </form>
-            <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+            <!-- Register Form -->
+            <form id="register-form" class="space-y-4 hidden">
                 <input type="text" id="regUsername" placeholder="Choose Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="email" id="regEmail" placeholder="Email" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="password" id="regPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -50,14 +52,10 @@
 
         <!-- Sidebar -->
         <aside class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20">
-            <!-- Header Profile (Clickable for Modal) -->
             <div class="h-16 px-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
-
-                <!-- Profile Section with Red Dot Alert -->
                 <div onclick="openProfileModal()" class="flex items-center gap-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors relative">
                     <div class="relative">
                         <img id="my-avatar" src="" class="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-200 dark:border-gray-600 object-cover">
-                        <!-- RED DOT NOTIFICATION -->
                         <div id="notif-badge" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                     </div>
                     <div>
@@ -65,7 +63,6 @@
                         <span class="text-[10px] text-gray-500 font-medium uppercase">View Profile & Friends</span>
                     </div>
                 </div>
-
                 <div class="flex gap-1">
                     <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
                         <svg class="w-4 h-4 text-gray-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -106,7 +103,8 @@
             <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <form onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex items-end gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <!-- Chat Form with ID to prevent default reload -->
+                <form id="chat-form" class="max-w-4xl mx-auto flex items-end gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-700">
                     <input type="text" id="messageText" placeholder="Write a message..." autocomplete="off" class="flex-1 bg-transparent border-0 focus:ring-0 text-sm py-2.5 px-4 outline-none">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl transition-colors shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
@@ -119,17 +117,13 @@
     <!-- PROFILE / FRIENDS MODAL -->
     <div id="profile-modal" class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-            <!-- Header -->
             <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="text-lg font-bold">Profile & Friends</h3>
                 <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
-
-            <!-- Body -->
             <div class="p-6">
-                <!-- User Stats -->
                 <div class="flex flex-col items-center mb-8">
                     <img id="modal-avatar" src="" class="w-20 h-20 rounded-full border-4 border-gray-100 dark:border-gray-700 mb-3">
                     <h2 id="modal-username" class="text-xl font-bold"></h2>
@@ -137,8 +131,6 @@
                         <div class="text-center"><span id="friend-count" class="font-bold block text-lg">0</span><span class="text-gray-500">Friends</span></div>
                     </div>
                 </div>
-
-                <!-- Tabs -->
                 <div class="flex gap-2 border-b border-gray-200 dark:border-gray-700 mb-4 pb-2">
                     <button onclick="switchModalTab('search')" id="tab-modal-search" class="text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-2 flex-1">Find Friends</button>
                     <button onclick="switchModalTab('requests')" id="tab-modal-requests" class="text-sm font-semibold text-gray-500 pb-2 flex-1 relative">
@@ -146,8 +138,6 @@
                         <span id="modal-req-badge" class="hidden absolute top-0 right-4 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
                 </div>
-
-                <!-- Search Tab -->
                 <div id="modal-search-section">
                     <div class="flex gap-2">
                         <input type="text" id="searchUserInput" placeholder="Enter exact username..." class="flex-1 px-4 py-2.5 text-sm rounded-xl bg-gray-100 dark:bg-gray-700 border-none outline-none focus:ring-2 focus:ring-blue-500">
@@ -155,18 +145,13 @@
                     </div>
                     <p id="search-status" class="text-xs mt-3 text-center"></p>
                 </div>
-
-                <!-- Requests Tab -->
                 <div id="modal-requests-section" class="hidden h-40 overflow-y-auto">
-                    <div id="pending-list" class="space-y-2">
-                        <!-- Requests load here -->
-                    </div>
+                    <div id="pending-list" class="space-y-2"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT -->
     <script>
         const API_BASE = "https://nexus-9q5s.onrender.com";
         const WS_GLOBAL = "wss://nexus-9q5s.onrender.com/ws";
@@ -175,10 +160,11 @@
         let wsGlobal;
         let wsPrivate;
         let currentUser = localStorage.getItem("nexus_user");
-        let currentChatType = 'global';
-        let currentChatTarget = null;
 
-        // Theme init
+        // Sticky Chat Memory: Pehle wali state yaad rakhega
+        let currentChatType = localStorage.getItem("last_chat_type") || 'global';
+        let currentChatTarget = localStorage.getItem("last_chat_target") || null;
+
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); }
         function toggleDarkMode() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); }
 
@@ -190,7 +176,20 @@
             document.getElementById("register-form").classList.toggle("hidden", tab !== 'register');
         }
 
-        async function handleRegister(e) {
+        // Secure Form Submit for Auth (Prevents Reload)
+        document.getElementById("login-form").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const username = document.getElementById("loginUsername").value.trim();
+            const password = document.getElementById("loginPassword").value;
+            try {
+                const res = await fetch(`${API_BASE}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+                const data = await res.json();
+                if (res.ok) { localStorage.setItem("nexus_user", username); startWorkspace(username); }
+                else { document.getElementById("auth-status").style.color = "red"; document.getElementById("auth-status").innerText = data.detail; }
+            } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
+        });
+
+        document.getElementById("register-form").addEventListener("submit", async function(e) {
             e.preventDefault();
             const username = document.getElementById("regUsername").value.trim();
             const email = document.getElementById("regEmail").value.trim();
@@ -201,19 +200,7 @@
                 if (res.ok) { document.getElementById("auth-status").style.color = "green"; document.getElementById("auth-status").innerText = "Success! Please login."; switchTab('login'); }
                 else { document.getElementById("auth-status").style.color = "red"; document.getElementById("auth-status").innerText = data.detail; }
             } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const username = document.getElementById("loginUsername").value.trim();
-            const password = document.getElementById("loginPassword").value;
-            try {
-                const res = await fetch(`${API_BASE}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-                const data = await res.json();
-                if (res.ok) { localStorage.setItem("nexus_user", username); startWorkspace(username); }
-                else { document.getElementById("auth-status").style.color = "red"; document.getElementById("auth-status").innerText = data.detail; }
-            } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
-        }
+        });
 
         function startWorkspace(username) {
             currentUser = username;
@@ -227,43 +214,51 @@
             loadFriendsAndRequests();
             connectGlobalWS();
             connectPrivateWS();
+
+            // Open exactly the chat you were in last time
+            if (currentChatType === 'private' && currentChatTarget) {
+                selectChat('private', currentChatTarget);
+            } else {
+                selectChat('global');
+            }
         }
 
-        // WebSockets (No Refresh Bug Fix)
+        // WebSockets with Auto-Reconnect Logic
         function connectGlobalWS() {
             wsGlobal = new WebSocket(WS_GLOBAL);
             wsGlobal.onmessage = (event) => {
                 if (currentChatType === 'global') renderMessage(JSON.parse(event.data));
             };
+            wsGlobal.onclose = () => { setTimeout(connectGlobalWS, 3000); }; // Auto-Reconnect
         }
 
         function connectPrivateWS() {
             wsPrivate = new WebSocket(`${WS_PRIVATE}/${currentUser}`);
             wsPrivate.onmessage = (event) => {
                 let msg = JSON.parse(event.data);
-                if (currentChatType === 'private' && (msg.sender === currentChatTarget || msg.sender === currentUser)) {
+
+                // Ensures message only shows in the exact active window
+                const isRelevant =
+                    (msg.sender === currentChatTarget && msg.receiver === currentUser) ||
+                    (msg.sender === currentUser && msg.receiver === currentChatTarget);
+
+                if (currentChatType === 'private' && isRelevant) {
                     renderMessage(msg);
                 }
             };
+            wsPrivate.onclose = () => { setTimeout(connectPrivateWS, 3000); }; // Auto-Reconnect
         }
 
-        // Modal System
         function openProfileModal() { document.getElementById("profile-modal").classList.remove("hidden"); }
         function closeProfileModal() { document.getElementById("profile-modal").classList.add("hidden"); }
 
         function switchModalTab(tab) {
             document.getElementById("modal-search-section").classList.toggle("hidden", tab !== 'search');
             document.getElementById("modal-requests-section").classList.toggle("hidden", tab !== 'requests');
-
-            document.getElementById("tab-modal-search").className = tab === 'search'
-                ? "text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-2 flex-1"
-                : "text-sm font-semibold text-gray-500 pb-2 flex-1";
-            document.getElementById("tab-modal-requests").className = tab === 'requests'
-                ? "text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-2 flex-1 relative"
-                : "text-sm font-semibold text-gray-500 pb-2 flex-1 relative";
+            document.getElementById("tab-modal-search").className = tab === 'search' ? "text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-2 flex-1" : "text-sm font-semibold text-gray-500 pb-2 flex-1";
+            document.getElementById("tab-modal-requests").className = tab === 'requests' ? "text-sm font-semibold text-blue-600 border-b-2 border-blue-600 pb-2 flex-1 relative" : "text-sm font-semibold text-gray-500 pb-2 flex-1 relative";
         }
 
-        // Friend Logic
         async function searchAndAddUser() {
             const input = document.getElementById("searchUserInput");
             const status = document.getElementById("search-status");
@@ -284,13 +279,10 @@
         }
 
         async function loadFriendsAndRequests() {
-            // Load Pending Requests
             try {
                 const resReq = await fetch(`${API_BASE}/friends/requests/pending/${currentUser}`);
                 if (resReq.ok) {
                     const reqs = await resReq.json();
-
-                    // Update Notification Red Dots
                     const hasReqs = reqs.length > 0;
                     document.getElementById("notif-badge").classList.toggle("hidden", !hasReqs);
                     document.getElementById("modal-req-badge").classList.toggle("hidden", !hasReqs);
@@ -315,16 +307,15 @@
                 }
             } catch(e) {}
 
-            // Load Friends List & Stats
             try {
                 const resFriends = await fetch(`${API_BASE}/friends/list/${currentUser}`);
                 if (resFriends.ok) {
                     const friends = await resFriends.json();
-                    document.getElementById("friend-count").innerText = friends.length; // Update Stats
+                    document.getElementById("friend-count").innerText = friends.length;
 
                     const friendsList = document.getElementById("friends-list");
                     friendsList.innerHTML = friends.map(f => `
-                        <div onclick="selectChat('private', '${f.username}')" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
+                        <div onclick="selectChat('private', '${f.username}')" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group ${currentChatTarget === f.username ? 'bg-gray-100 dark:bg-gray-700/50' : ''}">
                             <img src="https://api.dicebear.com/7.x/notionists/svg?seed=${f.username}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 group-hover:border-blue-400">
                             <h4 class="text-sm font-medium truncate">${f.username}</h4>
                         </div>
@@ -340,12 +331,19 @@
             } catch(e) {}
         }
 
-        // Chat UI
         async function selectChat(type, target = null) {
             currentChatType = type;
             currentChatTarget = target;
+
+            // Save state in LocalStorage to prevent reset on refresh
+            localStorage.setItem("last_chat_type", type);
+            if (target) localStorage.setItem("last_chat_target", target);
+
             const chatBox = document.getElementById("chat-box");
             chatBox.innerHTML = "";
+
+            // Re-render friends list to highlight the active chat
+            loadFriendsAndRequests();
 
             if(type === 'global') {
                 document.getElementById("btn-global").classList.add("bg-blue-50", "dark:bg-blue-900/30", "text-blue-600", "dark:text-blue-400");
@@ -375,7 +373,7 @@
 
             msgDiv.className = `flex items-end gap-2 max-w-lg ${isMe ? 'ml-auto flex-row-reverse' : ''}`;
             msgDiv.innerHTML = `
-                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=${data.sender}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700">
+                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=${data.sender}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700 shrink-0">
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
                     <span class="text-[10px] text-gray-500 mb-1 px-1">@${data.sender}</span>
                     <div class="${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'} px-4 py-2.5 rounded-2xl text-sm shadow-sm break-words max-w-full">
@@ -387,22 +385,29 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function sendMessage(e) {
-            e.preventDefault();
+        // Bulletproof Chat Form Submission
+        document.getElementById("chat-form").addEventListener("submit", function(e) {
+            e.preventDefault(); // Prevents page reload 100%
             const input = document.getElementById("messageText");
             const content = input.value.trim();
             if (content === "") return;
 
-            if (currentChatType === 'global' && wsGlobal.readyState === WebSocket.OPEN) {
+            if (currentChatType === 'global' && wsGlobal && wsGlobal.readyState === WebSocket.OPEN) {
                 wsGlobal.send(JSON.stringify({ sender: currentUser, content: content }));
-            } else if (currentChatType === 'private' && wsPrivate.readyState === WebSocket.OPEN) {
-                // Bug Fixed: Backend will now echo this back properly formatted, no need to refresh!
+            } else if (currentChatType === 'private' && wsPrivate && wsPrivate.readyState === WebSocket.OPEN) {
                 wsPrivate.send(JSON.stringify({ receiver: currentChatTarget, content: content }));
+            } else {
+                alert("Connecting to secure server... Please try sending again in 2 seconds.");
             }
             input.value = "";
-        }
+        });
 
-        function logout() { localStorage.removeItem("nexus_user"); location.reload(); }
+        function logout() {
+            localStorage.removeItem("nexus_user");
+            localStorage.removeItem("last_chat_type");
+            localStorage.removeItem("last_chat_target");
+            location.reload();
+        }
     </script>
 </body>
 </html>
