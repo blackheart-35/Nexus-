@@ -10,10 +10,8 @@ import json
 import random
 import requests
 
-# --- 1. Real Email API Configuration (Brevo) ---
-# Nayi Fresh API Key yahan update kar di gayi hai
-BREVO_API_KEY = "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"
-SENDER_EMAIL = "nexususeradmin34@gmail.com"
+# --- 1. Real Email API Configuration (Resend) ---
+RESEND_API_KEY = "re_cxkgmmXH_6bdvegzayyNE84JuBjM9nkSB"
 
 # Temporary memory for OTPs
 pending_otps = {}
@@ -51,7 +49,7 @@ class DBPrivateMessage(Base):
 Base.metadata.create_all(bind=engine)
 
 # --- 4. FastAPI App Setup ---
-app = FastAPI(title="Nexus Workspace - Real Emails")
+app = FastAPI(title="Nexus Workspace - Resend Emails")
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,31 +90,30 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 6. REAL EMAIL API LOGIC (Brevo) ---
+# --- 6. REAL EMAIL API LOGIC (Resend) ---
 def send_otp_email(receiver_email: str, otp_code: str):
-    url = "https://api.brevo.com/v3/smtp/email"
+    url = "https://api.resend.com/emails"
     headers = {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json"
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
     }
 
-    # Premium HTML Email Design
+    # Resend Free Tier me SENDER hamesha onboarding@resend.dev hota hai
     payload = {
-        "sender": {"name": "Nexus Security", "email": SENDER_EMAIL},
-        "to": [{"email": receiver_email}],
+        "from": "Nexus Security <onboarding@resend.dev>",
+        "to": [receiver_email],
         "subject": "Your Nexus Workspace OTP",
-        "htmlContent": f"""
+        "html": f"""
         <div style="font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; background-color: #f3f4f6; max-width: 500px; margin: auto; border: 1px solid #e5e7eb;">
             <div style="text-align: center; margin-bottom: 20px;">
-                <span style="font-size: 30px;">🌍</span>
+                <span style="font-size: 30px;">🚀</span>
                 <h2 style="color: #2563eb; margin-top: 10px; margin-bottom: 0;">Welcome to Nexus!</h2>
             </div>
-            <p style="color: #334155; text-align: center; font-size: 16px;">Your secure One-Time Password (OTP) to create your account is:</p>
+            <p style="color: #334155; text-align: center; font-size: 16px;">Your secure One-Time Password (OTP) is:</p>
             <div style="background-color: white; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #cbd5e1;">
                 <h1 style="margin: 0; letter-spacing: 8px; color: #1e293b; font-size: 32px;">{otp_code}</h1>
             </div>
-            <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">This OTP is valid for a few minutes.<br>Do not share this code with anyone.</p>
+            <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">This OTP is valid for a few minutes.</p>
         </div>
         """
     }
@@ -126,7 +123,7 @@ def send_otp_email(receiver_email: str, otp_code: str):
         if response.status_code in [200, 201, 202]:
             return True, "Success"
         else:
-            print(f"Brevo API Error: {response.text}")
+            print(f"Resend API Error: {response.text}")
             return False, response.text
     except Exception as e:
         print(f"Server Error: {str(e)}")
@@ -142,13 +139,11 @@ def register_send_otp(user: UserRegister, db: Session = Depends(get_db)):
     if db.query(DBUser).filter(DBUser.email == clean_email).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
-    # Generate 6-digit OTP
     otp = str(random.randint(100000, 999999))
 
-    # Call Real Email API
     success, message = send_otp_email(clean_email, otp)
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to send email. Server error.")
+        raise HTTPException(status_code=500, detail="Failed to send email. Check logs.")
 
     pending_otps[clean_email] = otp
     return {"message": "OTP sent! Check your inbox."}
