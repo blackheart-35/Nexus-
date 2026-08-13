@@ -9,9 +9,7 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } }
-            }
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
         }
     </script>
     <style>
@@ -24,9 +22,7 @@
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 h-screen w-screen overflow-hidden flex antialiased">
 
-    <!-- ========================================== -->
-    <!-- 1. AUTHENTICATION SCREEN                   -->
-    <!-- ========================================== -->
+    <!-- 1. AUTH SCREEN -->
     <div id="auth-screen" class="fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-300">
         <div class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
             <div class="text-center mb-6">
@@ -36,46 +32,40 @@
                 <h1 class="text-2xl font-bold">Nexus Workspace</h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Connect to the secure database</p>
             </div>
-
             <p id="auth-status" class="text-center text-sm font-semibold mb-4 text-red-500"></p>
-
             <div class="flex gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl mb-6">
                 <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600">Login</button>
                 <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400">Register</button>
             </div>
-
-            <!-- Login Form -->
+            <!-- Login -->
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <input type="text" id="loginUsername" placeholder="Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <input type="password" id="loginPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Enter Workspace</button>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Enter</button>
             </form>
-
-            <!-- Register Form -->
+            <!-- Register -->
             <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
-                <input type="text" id="regUsername" placeholder="Choose a Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                <input type="email" id="regEmail" placeholder="Email Address" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                <input type="password" id="regPassword" placeholder="Create Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="regUsername" placeholder="Choose Username" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="email" id="regEmail" placeholder="Email" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="password" id="regPassword" placeholder="Password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                 <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all">Create Account</button>
             </form>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 2. MAIN WORKSPACE (Premium UI)             -->
-    <!-- ========================================== -->
+    <!-- 2. MAIN WORKSPACE -->
     <div id="main-workspace" class="hidden w-full h-full flex">
         <!-- Sidebar -->
-        <aside class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <aside class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20">
+            <!-- Header -->
             <div class="h-16 px-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-3">
                     <img id="my-avatar" src="" class="w-9 h-9 rounded-full bg-gray-100 p-0.5 border border-gray-300 dark:border-gray-600 object-cover">
                     <span id="my-username-display" class="font-semibold text-sm"></span>
                 </div>
-
                 <div class="flex gap-2">
                     <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                        <svg class="w-5 h-5 text-gray-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                         <svg class="w-5 h-5 text-amber-500 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </button>
                     <button onclick="logout()" class="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
@@ -84,29 +74,52 @@
                 </div>
             </div>
 
+            <!-- Friend Search System -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex gap-2">
+                    <input type="text" id="searchUserInput" placeholder="Search username..." class="flex-1 px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+                    <button onclick="searchAndAddUser()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors">Add</button>
+                </div>
+                <p id="search-status" class="text-xs mt-2 text-gray-500"></p>
+            </div>
+
+            <!-- Sidebar Lists -->
             <div class="flex-1 overflow-y-auto py-3">
+
+                <!-- Pending Requests -->
+                <div id="pending-section" class="hidden mb-4">
+                    <div class="px-4 mb-2 text-xs font-semibold text-amber-500 uppercase tracking-wider">Pending Requests</div>
+                    <div id="pending-list" class="px-2 space-y-1"></div>
+                </div>
+
+                <!-- Global -->
                 <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Workspaces</div>
                 <div class="px-2 space-y-1 mb-4">
-                    <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 cursor-pointer">
+                    <div onclick="selectChat('global')" id="btn-global" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 cursor-pointer transition-colors">
                         <span class="text-xl">🌍</span>
                         <span class="text-sm font-medium">Global Relay</span>
                     </div>
-                    <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer text-gray-500">
-                        <span class="text-xl">🤖</span>
-                        <span class="text-sm font-medium">AI Assistant (Coming Soon)</span>
-                    </div>
+                </div>
+
+                <!-- Direct Messages (Friends) -->
+                <div class="px-4 mb-2 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Direct Messages</span>
+                    <button onclick="loadFriendsAndRequests()" class="text-gray-400 hover:text-blue-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></button>
+                </div>
+                <div id="friends-list" class="px-2 space-y-1">
+                    <!-- Friends will load here dynamically -->
                 </div>
             </div>
         </aside>
 
         <!-- Main Chat Area -->
-        <main class="flex-1 flex flex-col bg-white dark:bg-gray-900">
-            <header class="h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10">
+        <main class="flex-1 flex flex-col bg-white dark:bg-gray-900 z-10">
+            <header class="h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-xl">🌍</div>
+                    <div id="chat-header-icon" class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-xl">🌍</div>
                     <div>
-                        <h2 class="text-sm font-semibold">Global Relay</h2>
-                        <p class="text-xs text-green-500 font-medium">Database Connected • Live</p>
+                        <h2 id="chat-header-title" class="text-sm font-semibold">Global Relay</h2>
+                        <p id="chat-header-sub" class="text-xs text-green-500 font-medium">Public Secure Chat</p>
                     </div>
                 </div>
             </header>
@@ -124,15 +137,16 @@
         </main>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 3. JAVASCRIPT LOGIC (Database Link)        -->
-    <!-- ========================================== -->
     <script>
         const API_BASE = "https://nexus-9q5s.onrender.com";
-        const WS_BASE = "wss://nexus-9q5s.onrender.com/ws";
+        const WS_GLOBAL = "wss://nexus-9q5s.onrender.com/ws";
+        const WS_PRIVATE = "wss://nexus-9q5s.onrender.com/ws/private";
 
-        let ws;
+        let wsGlobal;
+        let wsPrivate;
         let currentUser = localStorage.getItem("nexus_user");
+        let currentChatType = 'global'; // 'global' or 'private'
+        let currentChatTarget = null;   // friend's username
 
         // Theme Setup
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -143,22 +157,12 @@
             localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
         }
 
-        // Auto-login check
-        window.onload = () => {
-            if (currentUser) { startWorkspace(currentUser); }
-        };
+        window.onload = () => { if (currentUser) { startWorkspace(currentUser); } };
 
         function switchTab(tab) {
             document.getElementById("auth-status").innerText = "";
             document.getElementById("login-form").classList.toggle("hidden", tab !== 'login');
             document.getElementById("register-form").classList.toggle("hidden", tab !== 'register');
-
-            document.getElementById("tab-login").className = tab === 'login'
-                ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600"
-                : "flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400 bg-transparent";
-            document.getElementById("tab-register").className = tab === 'register'
-                ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600"
-                : "flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 dark:text-gray-400 bg-transparent";
         }
 
         async function handleRegister(e) {
@@ -166,7 +170,6 @@
             const username = document.getElementById("regUsername").value.trim();
             const email = document.getElementById("regEmail").value.trim();
             const password = document.getElementById("regPassword").value;
-
             try {
                 const res = await fetch(`${API_BASE}/register`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -175,20 +178,19 @@
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("auth-status").style.color = "green";
-                    document.getElementById("auth-status").innerText = "Database entry successful! Please login.";
+                    document.getElementById("auth-status").innerText = "Success! Please login.";
                     switchTab('login');
                 } else {
                     document.getElementById("auth-status").style.color = "red";
                     document.getElementById("auth-status").innerText = data.detail;
                 }
-            } catch (err) { document.getElementById("auth-status").innerText = "Server error."; }
+            } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
         }
 
         async function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById("loginUsername").value.trim();
             const password = document.getElementById("loginPassword").value;
-
             try {
                 const res = await fetch(`${API_BASE}/login`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -202,7 +204,7 @@
                     document.getElementById("auth-status").style.color = "red";
                     document.getElementById("auth-status").innerText = data.detail;
                 }
-            } catch (err) { document.getElementById("auth-status").innerText = "Server error."; }
+            } catch (err) { document.getElementById("auth-status").innerText = "Error."; }
         }
 
         function startWorkspace(username) {
@@ -212,27 +214,153 @@
             document.getElementById("my-username-display").innerText = username;
             document.getElementById("my-avatar").src = `https://api.dicebear.com/7.x/notionists/svg?seed=${username}`;
 
-            // Connect WebSocket
-            ws = new WebSocket(WS_BASE);
-            ws.onmessage = (event) => {
-                try {
-                    let data = JSON.parse(event.data);
-                    renderMessage(data);
-                } catch(e) {}
+            // Load Friends and WebSockets
+            loadFriendsAndRequests();
+            connectGlobalWS();
+            connectPrivateWS();
+        }
+
+        // --- WebSockets ---
+        function connectGlobalWS() {
+            wsGlobal = new WebSocket(WS_GLOBAL);
+            wsGlobal.onmessage = (event) => {
+                if (currentChatType === 'global') {
+                    renderMessage(JSON.parse(event.data), 'global');
+                }
             };
         }
 
-        function renderMessage(data) {
+        function connectPrivateWS() {
+            wsPrivate = new WebSocket(`${WS_PRIVATE}/${currentUser}`);
+            wsPrivate.onmessage = (event) => {
+                let msg = JSON.parse(event.data);
+                // Render only if we are currently chatting with the sender (or if we sent it)
+                if (currentChatType === 'private' && (msg.sender === currentChatTarget || msg.sender === currentUser)) {
+                    renderMessage(msg, 'private');
+                }
+            };
+        }
+
+        // --- Friend System Logic ---
+        async function searchAndAddUser() {
+            const searchInput = document.getElementById("searchUserInput");
+            const statusText = document.getElementById("search-status");
+            const targetUser = searchInput.value.trim();
+
+            if(!targetUser) return;
+            statusText.innerText = "Sending request...";
+            statusText.style.color = "gray";
+
+            try {
+                const res = await fetch(`${API_BASE}/friends/request/send`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_username: currentUser, receiver_username: targetUser })
+                });
+                const data = await res.json();
+                statusText.innerText = res.ok ? "Friend request sent!" : data.detail;
+                statusText.style.color = res.ok ? "green" : "red";
+                searchInput.value = "";
+                setTimeout(() => { statusText.innerText = ""; }, 3000);
+            } catch (err) { statusText.innerText = "Error sending request."; }
+        }
+
+        async function loadFriendsAndRequests() {
+            // Load Pending
+            try {
+                const resReq = await fetch(`${API_BASE}/friends/requests/pending/${currentUser}`);
+                if (resReq.ok) {
+                    const reqs = await resReq.json();
+                    const pendingList = document.getElementById("pending-list");
+                    const pendingSection = document.getElementById("pending-section");
+
+                    if (reqs.length > 0) {
+                        pendingSection.classList.remove("hidden");
+                        pendingList.innerHTML = reqs.map(r => `
+                            <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-xs font-semibold">@${r.sender_username}</span>
+                                <div class="flex gap-1">
+                                    <button onclick="respondRequest(${r.request_id}, 'accepted')" class="text-green-500 hover:bg-green-50 p-1 rounded">✅</button>
+                                    <button onclick="respondRequest(${r.request_id}, 'rejected')" class="text-red-500 hover:bg-red-50 p-1 rounded">❌</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        pendingSection.classList.add("hidden");
+                    }
+                }
+            } catch(e) {}
+
+            // Load Friends List
+            try {
+                const resFriends = await fetch(`${API_BASE}/friends/list/${currentUser}`);
+                if (resFriends.ok) {
+                    const friends = await resFriends.json();
+                    const friendsList = document.getElementById("friends-list");
+                    friendsList.innerHTML = friends.map(f => `
+                        <div onclick="selectChat('private', '${f.username}')" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
+                            <img src="https://api.dicebear.com/7.x/notionists/svg?seed=${f.username}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 group-hover:border-blue-400">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">${f.username}</h4>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {}
+        }
+
+        async function respondRequest(reqId, action) {
+            try {
+                await fetch(`${API_BASE}/friends/request/respond`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request_id: reqId, action: action })
+                });
+                loadFriendsAndRequests();
+            } catch(e) {}
+        }
+
+        // --- Chat UI Switching ---
+        async function selectChat(type, target = null) {
+            currentChatType = type;
+            currentChatTarget = target;
+
+            const chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML = ""; // Clear current chat
+
+            // Update UI styling for active tab
+            if(type === 'global') {
+                document.getElementById("btn-global").classList.add("bg-blue-50", "dark:bg-blue-900/30", "text-blue-600", "dark:text-blue-400");
+                document.getElementById("chat-header-icon").innerHTML = "🌍";
+                document.getElementById("chat-header-title").innerText = "Global Relay";
+                document.getElementById("chat-header-sub").innerText = "Public Secure Chat";
+                chatBox.innerHTML = `<div class="text-center text-xs text-gray-500 my-4">Joined Global Relay</div>`;
+            } else {
+                document.getElementById("btn-global").classList.remove("bg-blue-50", "dark:bg-blue-900/30", "text-blue-600", "dark:text-blue-400");
+                document.getElementById("chat-header-icon").innerHTML = `<img src="https://api.dicebear.com/7.x/notionists/svg?seed=${target}" class="w-full h-full rounded-full">`;
+                document.getElementById("chat-header-title").innerText = target;
+                document.getElementById("chat-header-sub").innerText = "End-to-End Encrypted";
+
+                // Fetch chat history for this private chat
+                try {
+                    const res = await fetch(`${API_BASE}/messages/private/${currentUser}/${target}`);
+                    if(res.ok) {
+                        const history = await res.json();
+                        history.forEach(msg => renderMessage(msg, 'private'));
+                    }
+                } catch(e) {}
+            }
+        }
+
+        function renderMessage(data, context) {
             const chatBox = document.getElementById("chat-box");
             const isMe = data.sender === currentUser;
             const msgDiv = document.createElement("div");
 
-            msgDiv.className = `flex items-end gap-2 max-w-lg ${isMe ? 'ml-auto flex-row-reverse' : ''}`;
+            msgDiv.className = `flex items-end gap-2 max-w-lg animate-fade-up ${isMe ? 'ml-auto flex-row-reverse' : ''}`;
             msgDiv.innerHTML = `
                 <img src="https://api.dicebear.com/7.x/notionists/svg?seed=${data.sender}" class="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-700">
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
                     <span class="text-[10px] text-gray-500 mb-1 px-1">@${data.sender}</span>
-                    <div class="${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'} px-4 py-2.5 rounded-2xl text-sm shadow-sm">
+                    <div class="${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'} px-4 py-2.5 rounded-2xl text-sm shadow-sm break-words max-w-full">
                         ${data.content}
                     </div>
                 </div>
@@ -244,10 +372,18 @@
         function sendMessage(e) {
             e.preventDefault();
             const input = document.getElementById("messageText");
-            if (ws && ws.readyState === WebSocket.OPEN && input.value.trim() !== "") {
-                ws.send(JSON.stringify({ sender: currentUser, content: input.value }));
-                input.value = "";
+            const content = input.value.trim();
+            if (content === "") return;
+
+            if (currentChatType === 'global' && wsGlobal.readyState === WebSocket.OPEN) {
+                wsGlobal.send(JSON.stringify({ sender: currentUser, content: content }));
+            } else if (currentChatType === 'private' && wsPrivate.readyState === WebSocket.OPEN) {
+                // Send JSON payload to private WebSocket including receiver target
+                wsPrivate.send(JSON.stringify({ receiver: currentChatTarget, content: content }));
+                // Optimistically render my own message immediately
+                renderMessage({ sender: currentUser, receiver: currentChatTarget, content: content }, 'private');
             }
+            input.value = "";
         }
 
         function logout() {
