@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
+import json
 
 # --- 1. Database Setup ---
 DATABASE_URL = "sqlite:///./nexus.db"
@@ -40,7 +41,7 @@ class DBPrivateMessage(Base):
 Base.metadata.create_all(bind=engine)
 
 # --- 3. FastAPI App Setup ---
-app = FastAPI(title="Nexus Workspace - Friend System")
+app = FastAPI(title="Nexus Workspace - Advanced UI")
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,17 +70,13 @@ class UserLogin(BaseModel):
 
 class FriendReqAction(BaseModel):
     request_id: int
-    action: str  # 'accepted' or 'rejected'
+    action: str
 
 class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
 # --- 5. Auth Routes ---
-@app.get("/")
-def read_root():
-    return {"status": "Nexus Server Live with Friend System"}
-
 @app.post("/register")
 def register(user: UserRegister, db: Session = Depends(get_db)):
     if db.query(DBUser).filter(DBUser.username == user.username).first():
@@ -97,18 +94,13 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {"message": "Login successful", "username": db_user.username}
 
 # --- 6. Friend System Routes ---
-@app.get("/users/search/{query}")
-def search_users(query: str, db: Session = Depends(get_db)):
-    users = db.query(DBUser).filter(DBUser.username.contains(query)).limit(10).all()
-    return [{"id": u.id, "username": u.username, "bio": u.bio} for u in users]
-
 @app.post("/friends/request/send")
 def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
     sender = db.query(DBUser).filter(DBUser.username == req.sender_username).first()
     receiver = db.query(DBUser).filter(DBUser.username == req.receiver_username).first()
 
     if not receiver or sender.id == receiver.id:
-        raise HTTPException(status_code=400, detail="Invalid user request")
+        raise HTTPException(status_code=400, detail="User not found or invalid request")
 
     existing = db.query(DBFriendRequest).filter(
         or_(
@@ -118,7 +110,7 @@ def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
     ).first()
 
     if existing:
-        raise HTTPException(status_code=400, detail="Request already exists or already friends")
+        raise HTTPException(status_code=400, detail="Request pending or already friends")
 
     new_req = DBFriendRequest(sender_id=sender.id, receiver_id=receiver.id, status="pending")
     db.add(new_req)
@@ -167,7 +159,7 @@ def get_friends_list(username: str, db: Session = Depends(get_db)):
         friend_id = a.receiver_id if a.sender_id == user.id else a.sender_id
         f_user = db.query(DBUser).filter(DBUser.id == friend_id).first()
         if f_user:
-            friends.append({"id": f_user.id, "username": f_user.username, "bio": f_user.bio})
+            friends.append({"id": f_user.id, "username": f_user.username})
     return friends
 
 @app.get("/messages/private/{user1}/{user2}")
@@ -180,7 +172,7 @@ def get_private_history(user1: str, user2: str, db: Session = Depends(get_db)):
     ).order_by(DBPrivateMessage.timestamp.asc()).all()
     return [{"sender": m.sender_username, "receiver": m.receiver_username, "content": m.content} for m in messages]
 
-# --- 7. WebSocket Manager (Global + Private DMs) ---
+# --- 7. WebSocket Manager (Fixed Live Chat) ---
 class ConnectionManager:
     def __init__(self):
         self.active_global: List[WebSocket] = []
@@ -206,13 +198,18 @@ class ConnectionManager:
         if username in self.private_connections:
             del self.private_connections[username]
 
-    async def send_private(self, sender: str, receiver: str, message_data: str, db: Session):
-        # Save to DB
-        msg = DBPrivateMessage(sender_username=sender, receiver_username=receiver, content=message_data)
+    async def send_private(self, sender: str, receiver: str, content: str, db: Session):
+        msg = DBPrivateMessage(sender_username=sender, receiver_username=receiver, content=content)
         db.add(msg)
         db.commit()
 
-        # Send live if online
+        # Format message correctly for frontend real-time update
+        message_data = json.dumps({
+            "sender": sender,
+            "receiver": receiver,
+            "content": content
+        })
+
         if receiver in self.private_connections:
             await self.private_connections[receiver].send_text(message_data)
         if sender in self.private_connections:
