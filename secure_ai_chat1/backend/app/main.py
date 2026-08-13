@@ -93,24 +93,17 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 6. Email OTP Logic (With Error Debugging & Timeout) ---
+# --- 6. Email OTP Logic (Dev Mode for Render Free Tier) ---
 def send_otp_email(receiver_email: str, otp_code: str):
-    try:
-        msg = EmailMessage()
-        msg.set_content(f"Welcome to Nexus Workspace!\n\nYour secret Verification Code is: {otp_code}\n\nDo not share this with anyone.")
-        msg['Subject'] = 'Nexus Security: Your OTP Code'
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = receiver_email
+    # Render blocks SMTP, so we print the OTP in server logs for testing
+    print("\n" + "="*50)
+    print(f"🚨 URGENT: NEW OTP REQUEST 🚨")
+    print(f"📧 Sending to  : {receiver_email}")
+    print(f"🔑 YOUR OTP IS : {otp_code}")
+    print("="*50 + "\n")
 
-        # 10 second ka timeout lagaya hai taaki server hang na ho
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
-        server.login(SENDER_EMAIL, APP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True, "Success"
-    except Exception as e:
-        print("Email Error Backend:", str(e))
-        return False, str(e) # Exact error wapas bhejega
+    # Hum system ko bolenge ki email successfully chala gaya
+    return True, "Success"
 
 # --- 7. Auth Routes ---
 @app.post("/register/send-otp")
