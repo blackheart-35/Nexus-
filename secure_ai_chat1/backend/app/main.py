@@ -8,17 +8,22 @@ from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 import json
 import random
+import requests
 
-# --- 1. Database Setup ---
+# --- 1. Real Email API Configuration (Brevo) ---
+BREVO_API_KEY = "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"
+SENDER_EMAIL = "nexususeradmin34@gmail.com"
+
+# Temporary memory for OTPs
+pending_otps = {}
+
+# --- 2. Database Setup ---
 DATABASE_URL = "sqlite:///./nexus.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Temporary memory for OTPs (Email -> OTP)
-pending_otps = {}
-
-# --- 2. Database Models ---
+# --- 3. Database Models ---
 class DBUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -44,8 +49,8 @@ class DBPrivateMessage(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# --- 3. FastAPI App Setup ---
-app = FastAPI(title="Nexus Workspace - Dev Mode")
+# --- 4. FastAPI App Setup ---
+app = FastAPI(title="Nexus Workspace - Real Emails")
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +67,7 @@ def get_db():
     finally:
         db.close()
 
-# --- 4. Schemas ---
+# --- 5. Schemas ---
 class UserRegister(BaseModel):
     username: str
     email: str
@@ -86,28 +91,66 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 5. Auth Routes (DEV MODE - OTP IN LOGS) ---
+# --- 6. REAL EMAIL API LOGIC (Brevo) ---
+def send_otp_email(receiver_email: str, otp_code: str):
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    # Premium HTML Email Design
+    payload = {
+        "sender": {"name": "Nexus Security", "email": SENDER_EMAIL},
+        "to": [{"email": receiver_email}],
+        "subject": "Your Nexus Workspace OTP",
+        "htmlContent": f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; border-radius: 10px; background-color: #f3f4f6; max-width: 500px; margin: auto; border: 1px solid #e5e7eb;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 30px;">🌍</span>
+                <h2 style="color: #2563eb; margin-top: 10px; margin-bottom: 0;">Welcome to Nexus!</h2>
+            </div>
+            <p style="color: #334155; text-align: center; font-size: 16px;">Your secure One-Time Password (OTP) to create your account is:</p>
+            <div style="background-color: white; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #cbd5e1;">
+                <h1 style="margin: 0; letter-spacing: 8px; color: #1e293b; font-size: 32px;">{otp_code}</h1>
+            </div>
+            <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">This OTP is valid for a few minutes.<br>Do not share this code with anyone.</p>
+        </div>
+        """
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code in [200, 201, 202]:
+            return True, "Success"
+        else:
+            print(f"Brevo API Error: {response.text}")
+            return False, response.text
+    except Exception as e:
+        print(f"Server Error: {str(e)}")
+        return False, str(e)
+
+# --- 7. Auth Routes ---
 @app.post("/register/send-otp")
 def register_send_otp(user: UserRegister, db: Session = Depends(get_db)):
-    clean_email = user.email.strip().lower() # Fixed Email case sensitivity
+    clean_email = user.email.strip().lower()
 
     if db.query(DBUser).filter(DBUser.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already taken.")
     if db.query(DBUser).filter(DBUser.email == clean_email).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
-    # Generate OTP
+    # Generate 6-digit OTP
     otp = str(random.randint(100000, 999999))
 
-    # 🚨 DEV MODE: Print OTP in Render Logs 🚨
-    print("\n" + "="*50)
-    print(f"🚨 URGENT: NEW OTP REQUEST 🚨")
-    print(f"📧 Sending to  : {clean_email}")
-    print(f"🔑 YOUR OTP IS : {otp}")
-    print("="*50 + "\n")
+    # Call Real Email API
+    success, message = send_otp_email(clean_email, otp)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send email. Server error.")
 
     pending_otps[clean_email] = otp
-    return {"message": "OTP sent! Check Server Logs."}
+    return {"message": "OTP sent! Check your inbox."}
 
 @app.post("/register/verify")
 def verify_and_register(data: VerifyOTP, db: Session = Depends(get_db)):
@@ -133,7 +176,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     return {"message": "Login successful", "username": db_user.username}
 
-# --- 6. Friend System Routes ---
+# --- 8. Friend System Routes ---
 @app.post("/friends/request/send")
 def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
     sender = db.query(DBUser).filter(DBUser.username == req.sender_username).first()
@@ -194,7 +237,7 @@ def get_private_history(user1: str, user2: str, db: Session = Depends(get_db)):
     ).order_by(DBPrivateMessage.timestamp.asc()).all()
     return [{"sender": m.sender_username, "receiver": m.receiver_username, "content": m.content} for m in messages]
 
-# --- 7. WebSocket Manager ---
+# --- 9. WebSocket Manager ---
 class ConnectionManager:
     def __init__(self):
         self.active_global: List[WebSocket] = []
