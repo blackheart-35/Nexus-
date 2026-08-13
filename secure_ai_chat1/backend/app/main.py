@@ -11,7 +11,8 @@ import random
 import requests
 
 # --- 1. Real Email API Configuration (Brevo) ---
-BREVO_API_KEY = "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"
+# Nayi Fresh API Key yahan update kar di gayi hai
+BREVO_API_KEY = "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"
 SENDER_EMAIL = "nexususeradmin34@gmail.com"
 
 # Temporary memory for OTPs
