@@ -14,7 +14,7 @@ from email_validator import validate_email, EmailNotValidError
 
 # --- 1. Email Server Configuration ---
 SENDER_EMAIL = "nexususeradmin34@gmail.com"
-APP_PASSWORD = "wtub jqsa glqb pgvg" # Security tip: Project live hone ke baad isey change kar lena
+APP_PASSWORD = "wtubjqsaglqbpgvg" # Spaces removed for proper authentication
 
 # Temporary memory for OTPs (Email -> OTP)
 pending_otps = {}
@@ -93,7 +93,7 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 6. Email OTP Logic ---
+# --- 6. Email OTP Logic (Fast SSL Port 465) ---
 def send_otp_email(receiver_email: str, otp_code: str):
     try:
         msg = EmailMessage()
@@ -102,33 +102,30 @@ def send_otp_email(receiver_email: str, otp_code: str):
         msg['From'] = SENDER_EMAIL
         msg['To'] = receiver_email
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        # Using SMTP_SSL for instant and secure connection
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(SENDER_EMAIL, APP_PASSWORD)
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        print("Email Error:", e)
+        print("Email Error Backend:", e)
         return False
 
-# --- 7. Auth Routes (Updated for OTP) ---
+# --- 7. Auth Routes ---
 @app.post("/register/send-otp")
 def register_send_otp(user: UserRegister, db: Session = Depends(get_db)):
-    # Check if Username or Email is already taken
     if db.query(DBUser).filter(DBUser.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already taken. Please try another one!")
     if db.query(DBUser).filter(DBUser.email == user.email).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
-    # Deep Email Validation
     try:
         valid = validate_email(user.email, check_deliverability=True)
         clean_email = valid.normalized
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="This email doesn't exist or is invalid.")
 
-    # Generate & Send OTP
     otp = str(random.randint(100000, 999999))
     email_sent = send_otp_email(clean_email, otp)
 
@@ -150,18 +147,17 @@ def verify_and_register(data: VerifyOTP, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
 
-    del pending_otps[data.email] # OTP delete kar diya verify hone ke baad
+    del pending_otps[data.email]
     return {"message": "Account created successfully!"}
 
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Note: Login is still direct. If you want OTP on login too, we can add it later!
     db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
     if not db_user or db_user.password != user.password:
         raise HTTPException(status_code=400, detail="Invalid credentials")
     return {"message": "Login successful", "username": db_user.username}
 
-# --- 8. Friend System Routes (Same as before) ---
+# --- 8. Friend System Routes ---
 @app.post("/friends/request/send")
 def send_friend_request(req: SendFriendReq, db: Session = Depends(get_db)):
     sender = db.query(DBUser).filter(DBUser.username == req.sender_username).first()
@@ -222,7 +218,7 @@ def get_private_history(user1: str, user2: str, db: Session = Depends(get_db)):
     ).order_by(DBPrivateMessage.timestamp.asc()).all()
     return [{"sender": m.sender_username, "receiver": m.receiver_username, "content": m.content} for m in messages]
 
-# --- 9. WebSocket Manager (Live Chat) ---
+# --- 9. WebSocket Manager ---
 class ConnectionManager:
     def __init__(self):
         self.active_global: List[WebSocket] = []
