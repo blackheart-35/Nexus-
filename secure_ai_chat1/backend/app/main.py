@@ -93,7 +93,7 @@ class SendFriendReq(BaseModel):
     sender_username: str
     receiver_username: str
 
-# --- 6. Email OTP Logic (Fast SSL Port 465) ---
+# --- 6. Email OTP Logic (With Error Debugging & Timeout) ---
 def send_otp_email(receiver_email: str, otp_code: str):
     try:
         msg = EmailMessage()
@@ -102,15 +102,15 @@ def send_otp_email(receiver_email: str, otp_code: str):
         msg['From'] = SENDER_EMAIL
         msg['To'] = receiver_email
 
-        # Using SMTP_SSL for instant and secure connection
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        # 10 second ka timeout lagaya hai taaki server hang na ho
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
         server.login(SENDER_EMAIL, APP_PASSWORD)
         server.send_message(msg)
         server.quit()
-        return True
+        return True, "Success"
     except Exception as e:
-        print("Email Error Backend:", e)
-        return False
+        print("Email Error Backend:", str(e))
+        return False, str(e) # Exact error wapas bhejega
 
 # --- 7. Auth Routes ---
 @app.post("/register/send-otp")
@@ -121,41 +121,21 @@ def register_send_otp(user: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
     try:
-        valid = validate_email(user.email, check_deliverability=True)
+        # FIX: check_deliverability=False kar diya taaki server hang na ho
+        valid = validate_email(user.email, check_deliverability=False)
         clean_email = valid.normalized
     except EmailNotValidError:
-        raise HTTPException(status_code=400, detail="This email doesn't exist or is invalid.")
+        raise HTTPException(status_code=400, detail="Invalid email format.")
 
     otp = str(random.randint(100000, 999999))
-    email_sent = send_otp_email(clean_email, otp)
+    email_sent, error_msg = send_otp_email(clean_email, otp)
 
     if not email_sent:
-        raise HTTPException(status_code=500, detail="Failed to send OTP. Email server error.")
+        # Ab screen par exact error dikhega ki Google ne block kiya ya Render ne
+        raise HTTPException(status_code=500, detail=f"Failed: {error_msg}")
 
     pending_otps[clean_email] = otp
     return {"message": "OTP sent! Check your inbox."}
-
-@app.post("/register/verify")
-def verify_and_register(data: VerifyOTP, db: Session = Depends(get_db)):
-    if data.email not in pending_otps or pending_otps[data.email] != data.otp:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
-
-    if db.query(DBUser).filter(DBUser.username == data.username).first():
-        raise HTTPException(status_code=400, detail="Username taken during verification.")
-
-    new_user = DBUser(username=data.username, email=data.email, password=data.password)
-    db.add(new_user)
-    db.commit()
-
-    del pending_otps[data.email]
-    return {"message": "Account created successfully!"}
-
-@app.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
-    if not db_user or db_user.password != user.password:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-    return {"message": "Login successful", "username": db_user.username}
 
 # --- 8. Friend System Routes ---
 @app.post("/friends/request/send")
