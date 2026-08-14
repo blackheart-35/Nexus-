@@ -11,7 +11,7 @@ import random
 import requests
 
 # --- 1. Real Email API Configuration (Resend) ---
-RESEND_API_KEY = "re_cxkgmmXH_6bdvegzayyNE84JuBjM9nkSB"
+RESEND_API_KEY = ""
 
 # Temporary memory for OTPs
 pending_otps = {}
